@@ -11,6 +11,8 @@ module main(out);
 	initial begin
 		$dumpfile("test.vcd");
 		$dumpvars(0,main);
+		// stats cachedump 1 100
+		// ITEM abcdefghijkl [3 b; 1324188529 s]
 		clk = 1'b0;
 		res = 1'b0;
 		key = "abcdefghijkl";
@@ -24,12 +26,19 @@ module main(out);
 		a = 32'hDEADBEEF + length + interval;
 		b = 32'hDEADBEEF + length + interval;
 		c = 32'hDEADBEEF + length + interval;
-		$display("a=%h; b=%h; c=%h", a, b, c);
+		$display("1: a=%h; b=%h; c=%h", a, b, c);
 
-		k0 = key[3*4*8:2*4*8+1];
-		k1 = key[2*4*8:1*4*8+1];
-		k2 = key[1*4*8:1];
-		$display("k0=%s; k1=%s; k2=%s", k0, k1, k2);
+		k0 = key[3*4*8+1:2*4*8+1];
+		k1 = key[2*4*8+1:1*4*8+1];
+		k2 = key[1*4*8+1:1];
+
+		/* DEBUG: convert big endian into little endian */
+		k0 = { k0[7:0], k0[15:8], k0[23:16], k0[31:24] };
+		k1 = { k1[7:0], k1[15:8], k1[23:16], k1[31:24] };
+		k2 = { k2[7:0], k2[15:8], k2[23:16], k2[31:24] };
+		/* DEBUG: end */
+
+		$display("k: k0=%h; k1=%h; k2=%h", k0, k1, k2);
 
 		case (length)
 			32'd12: begin
@@ -92,17 +101,18 @@ module main(out);
 			end
 		endcase
 
-		$display("a=%h; b=%h; c=%h", a, b, c);
+		$display("2: a=%h; b=%h; c=%h", a, b, c);
 
 		/* final */
-		c = c ^ b; c = c - (b << 14) ^ (b >> (32 - 14));
-		a = a ^ c; a = a - (c << 11) ^ (c >> (32 - 11));
-		b = b ^ a; b = b - (a << 25) ^ (a >> (32 - 25));
-		c = c ^ b; c = c - (c << 16) ^ (c >> (32 - 16));
-		a = a ^ c; a = a - (c << 4) ^ (c >> (32 - 4));
-		b = b ^ a; b = b - (a << 14) ^ (a >> (32 - 14));
-		c = c ^ b; c = c - (b << 24) ^ (b >> (32 - 24));
-		$display("!!OUT=%d", c);
+		c = c ^ b; c = c - ((b << 14) ^ (b >> (32 - 14)));
+		a = a ^ c; a = a - ((c << 11) ^ (c >> (32 - 11)));
+		b = b ^ a; b = b - ((a << 25) ^ (a >> (32 - 25)));
+		c = c ^ b; c = c - ((b << 16) ^ (b >> (32 - 16)));
+		a = a ^ c; a = a - ((c << 4) ^ (c >> (32 - 4)));
+		b = b ^ a; b = b - ((a << 14) ^ (a >> (32 - 14)));
+		c = c ^ b; c = c - ((b << 24) ^ (b >> (32 - 24)));
+		$display("3: a=%h; b=%h; c=%h", a, b, c);
+		$display("!!OUT=%X", c);
 		$finish;
 	end
 endmodule
