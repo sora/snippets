@@ -1,17 +1,14 @@
 `define STEP 2
+`define dbg  1
 
 module sim();
 
-reg tb_enable = 1'b0;
+reg        tb_enable = 1'b0;
+reg[639:0] tb_key;
 
-reg[31:0] tb_oa;
-reg[31:0] tb_ob;
-reg[31:0] tb_oc;
 wire CLK;
 wire RST;
-wire[31:0] oa;
-wire[31:0] ob;
-wire[31:0] oc;
+wire[31:0] tb_hashkey;
 
 clock clock (
   .CLK(CLK),
@@ -22,14 +19,16 @@ lookup2 lookup2 (
   .CLK(CLK),
   .RST(RST),
   .enable(tb_enable),
-  .a3(oa),
-  .b3(ob),
-  .c3(oc)
+  .key(tb_key),
+  .hashkey(tb_hashkey)
 );
 
 initial begin
-  $monitor("state: %d", lookup2.state);
-  #100 tb_enable = 1'b1;
+  //$monitor("state: %d", lookup2.state);
+  #100 tb_enable = 1'b1; tb_key = "abcdefghijkl";
+  #100 tb_enable = 1'b1; tb_key = "abcdefghijkl";
+  #100 tb_enable = 1'b1; tb_key = "abcdefghijkl";
+  #100 $finish;
 end
 
 initial begin
@@ -41,13 +40,10 @@ always @(posedge CLK) begin
   if (RST)
     tb_enable <= 1'b0;
   else begin
-    $display("------------");
-    if (oa && ob && oc) begin
-      $display("oa: %h", oa);
-      $display("ob: %h", ob);
-      $display("oc: %h", oc);
-    end
-    if (tb_enable == 1'b1)
+    if (tb_hashkey)
+      $display("key: %s, hashkey: %h", tb_key, tb_hashkey);
+      $display("%x, %x, %x", tb_key[95:64], tb_key[63:32], tb_key[31:0]);
+    if (tb_enable)
       tb_enable <= 1'b0;
   end
 end
@@ -71,61 +67,68 @@ module lookup2 (
   input  CLK,
   input  RST,
   input  enable,
-  output reg[31:0] a3,
-  output reg[31:0] b3,
-  output reg[31:0] c3
+  input  [639:0] key,
+  output wire[31:0] hashkey
 );
 
-parameter[2:0] s0 = 3'b000,
-               s1 = 3'b001,
-               s2 = 3'b010,
-               s3 = 3'b011;
+parameter[1:0] s0 = 2'b00, //idle
+               s1 = 2'b01;
 
 reg[2:0]   state;
-reg[31:0]  a1, b1, c1, a2, b2, c2;
-wire[31:0] next_a1, next_b1, next_c1,
+reg[31:0]  a1, b1, c1, a2, b2, c2, a3, b3, c3;
+wire[31:0] next_a0, next_b0, next_c0,
+           next_a1, next_b1, next_c1,
            next_a2, next_b2, next_c2,
            next_a3, next_b3, next_c3;
 
-wire[31:0] a0 = 32'h9e3779b9;
-wire[31:0] b0 = 32'h9e3779b9;
-wire[31:0] c0 = 32'hdeadbeef;
+reg[31:0] a0 = 32'h9e3779b9;
+reg[31:0] b0 = 32'h9e3779b9;
+reg[31:0] c0 = 32'hdeadbeef;
 
-assign next_a1 = (a0 - b0 - c0) ^ (c0 >> 13);
-assign next_b1 = (b0 - c0 - next_a1) ^ (a0 << 8);
+wire[31:0] k0 = key[95:64];
+wire[31:0] k1 = key[63:32];
+wire[31:0] k2 = key[31:0];
+//wire[31:0] k0 = { key[7:0], key[15:8], key[23:16], key[31:24] };
+//wire[31:0] k1 = { key[7:0], key[15:8], key[23:16], key[31:24] };
+//wire[31:0] k2 = { key[7:0], key[15:8], key[23:16], key[31:24] };
+
+//assign next_a0 = {1'b0, a0} + {1'b0, k0};
+assign next_a0 = a0 + k0;
+assign next_b0 = b0 + k1;
+assign next_c0 = c0 + k2;
+
+assign next_a1 = (next_a0 - next_b0 - next_c0) ^ (next_c0 >> 13);
+assign next_b1 = (next_b0 - next_c0 - next_a1) ^ (next_a1 << 8);
+
 assign next_a2 = (a1 - b1 - c1) ^ (c1 >> 12);
-assign next_b2 = (b1 - c1 - next_a2) ^ (a1 << 16);
+assign next_b2 = (b1 - c1 - next_a2) ^ (next_a2 << 16);
+
 assign next_a3 = (a2 - b2 - c2) ^ (c2 >> 3);
-assign next_b3 = (b2 - c2 - next_a3) ^ (a2 << 10);
+assign next_b3 = (b2 - c2 - next_a3) ^ (next_a3 << 10);
+
+assign hashkey = c3;
 
 always @(posedge CLK) begin
   if (RST) begin
     state <= s0;
   end
   else begin
-    case (state)
-      s1: begin
-        a1 <= next_a1;
-        b1 <= next_b1;
-        c1 <= (c0 - b0 - next_a1) ^ (next_b1 >> 13);
-        state <= s2;
-      end
-      s2: begin
-        a2 <= next_a2;
-        b2 <= next_b2;
-        c2 <= (c1 - b1 - next_a2) ^ (next_b2 >> 5);
-        state <= s3;
-      end
-      s3: begin
-        a3 <= next_a3;
-        b3 <= next_b3;
-        c3 <= (c2 - b2 - next_a3) ^ (next_b3 >> 15);
-      end
-    endcase
-    if (enable)
-      state <= s1;
+    a1 <= next_a1;
+    b1 <= next_b1;
+    c1 <= (c0 - b0 - next_a1) ^ (next_b1 >> 13);
+    a2 <= next_a2;
+    b2 <= next_b2;
+    c2 <= (c1 - b1 - next_a2) ^ (next_b2 >> 5);
+    a3 <= next_a3;
+    b3 <= next_b3;
+    c3 <= (c2 - b2 - next_a3) ^ (next_b3 >> 15);
+    state <= s0;
   end
 end
+
+always @*
+  if (enable)
+    state <= s1;
 
 endmodule
 
