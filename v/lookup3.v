@@ -1,4 +1,4 @@
-`define STEP 2
+`timescale 1ns / 1ns
 `define dbg  1
 
 module sim();
@@ -12,8 +12,8 @@ wire[31:0] tb_hashkey;
 wire tb_complete;
 
 clock clock (
-  .CLK(CLK),
-  .RST(RST)
+  .CLK(CLK)
+, .RST(RST)
 );
 
 lookup3 lookup3 (
@@ -53,13 +53,13 @@ end
 endmodule // sim()
 
 module clock (
-  output reg CLK,
-  output reg RST
+  output reg CLK
+, output reg RST
 );
 
 initial CLK = 0;
 initial RST = 0;
-always #(`STEP / 2) begin
+always #1 begin
   CLK <= ~CLK;
   RST <= 0;
 end
@@ -249,74 +249,43 @@ endmodule
 module lookup3 (
   input CLK
 , input RST
-, input [7:0]  key_length //from memcache protocol header
+, input [7:0]  key_length   //from memcache protocol header
 , input [31:0] k0
 , input [31:0] k1
 , input [31:0] k2
 , output reg[31:0] hashkey
 );
 
-parameter interval = 0;       //tmp
+parameter interval = 0;  //tmp
 
-wire[31:0] a0 = k0 + 32'hDEADBEEF + key_length + interval;
-wire[31:0] b0 = k1 + 32'hDEADBEEF + key_length + interval;
-wire[31:0] c0 = k2 + 32'hDEADBEEF + key_length + interval;
-wire[7:0]  w0 = key_length;
+wire[31:0] a[0:21];
+wire[31:0] b[0:21];
+wire[31:0] c[0:21];
+wire[7:0]  w[0:21];
+wire[31:0] lc;
 
-wire[31:0] a1, b1, c1;
-wire[31:0] a2, b2, c2;
-wire[31:0] a3, b3, c3;
-wire[31:0] a4, b4, c4;
-wire[31:0] a5, b5, c5;
-wire[31:0] a6, b6, c6;
-wire[31:0] a7, b7, c7;
-wire[31:0] a8, b8, c8;
-wire[31:0] a9, b9, c9;
-wire[31:0] a10, b10, c10;
-wire[31:0] a11, b11, c11;
-wire[31:0] a12, b12, c12;
-wire[31:0] a13, b13, c13;
-wire[31:0] a14, b14, c14;
-wire[31:0] a15, b15, c15;
-wire[31:0] a16, b16, c16;
-wire[31:0] a17, b17, c17;
-wire[31:0] a18, b18, c18;
-wire[31:0] a19, b19, c19;
-wire[31:0] a20, b20, c20;
-wire[31:0] a21, b21, c21;
-wire[31:0] o;
+/* initial */
+assign a[0] = k0 + 32'hDEADBEEF + key_length + interval;
+assign b[0] = k1 + 32'hDEADBEEF + key_length + interval;
+assign c[0] = k2 + 32'hDEADBEEF + key_length + interval;
+assign w[0] = key_length;
 
-wire[7:0] w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12,
-          w13, w14, w15, w16, w17, w18, w19, w20, w21;
+/* halfway round */
+genvar i;
+generate
+  for (i=1; i<22; i=i+1) begin :loop
+    hash_r1 round (CLK, RST,a[i-1], b[i-1], c[i-1], k0, k1, k2, w[i-1], a[i], b[i], c[i], w[i]);
+  end
+endgenerate
 
-hash_r1 round1 (CLK, RST, a0, b0, c0, k0, k1, k2, w0, a1, b1, c1, w1);
-hash_r1 round2 (CLK, RST, a1, b1, c1, k0, k1, k2, w1, a2, b2, c2, w2);
-hash_r1 round3 (CLK, RST, a2, b2, c2, k0, k1, k2, w2, a3, b3, c3, w3);
-hash_r1 round4 (CLK, RST, a3, b3, c3, k0, k1, k2, w3, a4, b4, c4, w4);
-hash_r1 round5 (CLK, RST, a4, b4, c4, k0, k1, k2, w4, a5, b5, c5, w5);
-hash_r1 round6 (CLK, RST, a5, b5, c5, k0, k1, k2, w5, a6, b6, c6, w6);
-hash_r1 round7 (CLK, RST, a6, b6, c6, k0, k1, k2, w6, a7, b7, c7, w7);
-hash_r1 round8 (CLK, RST, a7, b7, c7, k0, k1, k2, w7, a8, b8, c8, w8);
-hash_r1 round9 (CLK, RST, a8, b8, c8, k0, k1, k2, w8, a9, b9, c9, w9);
-hash_r1 round10 (CLK, RST, a9, b9, c9, k0, k1, k2, w9, a10, b10, c10, w10);
-hash_r1 round11 (CLK, RST, a10, b10, c10, k0, k1, k2, w10, a11, b11, c11, w11);
-hash_r1 round12 (CLK, RST, a11, b11, c11, k0, k1, k2, w11, a12, b12, c12, w12);
-hash_r1 round13 (CLK, RST, a12, b12, c12, k0, k1, k2, w12, a13, b13, c13, w13);
-hash_r1 round14 (CLK, RST, a13, b13, c13, k0, k1, k2, w13, a14, b14, c14, w14);
-hash_r1 round15 (CLK, RST, a14, b14, c14, k0, k1, k2, w14, a15, b15, c15, w15);
-hash_r1 round16 (CLK, RST, a15, b15, c15, k0, k1, k2, w15, a16, b16, c16, w16);
-hash_r1 round17 (CLK, RST, a16, b16, c16, k0, k1, k2, w16, a17, b17, c17, w17);
-hash_r1 round18 (CLK, RST, a17, b17, c17, k0, k1, k2, w17, a18, b18, c18, w18);
-hash_r1 round19 (CLK, RST, a18, b18, c18, k0, k1, k2, w18, a19, b19, c19, w19);
-hash_r1 round20 (CLK, RST, a19, b19, c19, k0, k1, k2, w19, a20, b20, c20, w20);
-hash_r1 round21 (CLK, RST, a20, b20, c20, k0, k1, k2, w20, a21, b21, c21, w21);
-hash_r2 round22 (CLK, RST, a21, b21, c21, k0, k1, k2, w21, o);
+/* last round */
+hash_r2 lastround (CLK, RST, a[21], b[21], c[21], k0, k1, k2, w[21], lc);
 
 always @(posedge CLK) begin
   if (RST)
     hashkey <= 32'hFFFFFFFF;
   else
-    hashkey <= o;
+    hashkey <= lc;
 end
 endmodule
 
