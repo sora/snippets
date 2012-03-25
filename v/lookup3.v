@@ -85,7 +85,7 @@ reg[31:0] a0, b0, c0;
 reg[31:0] a1, b1, c1;
 reg[31:0] a2, b2, c2;
 reg[31:0] a3, b3, c3;
-reg[7:0]  w0, w1, w2, w3, w4;
+reg[7:0]  w0, w1, w2, w3;
 
 wire[7:0]  next_w0 = (iw > 12) ? iw - 12 : iw;
 wire[31:0] next_a0 = ia + k0;
@@ -107,26 +107,49 @@ always @(posedge CLK) begin
     oc <= 32'b0;
     ow <= 7'b0;
   end else begin
-    a0 <= next_a0;
-    c0 <= next_c0;
-    b0 <= next_b0;
-    w0 <= next_w0;
-    a1 <= next_a1;
-    c1 <= next_c1;
-    b1 <= (b0 - next_a1) ^ {next_a1[25:0], next_a1[31:26]};
-    w1 <= w0;
-    a2 <= next_a2;
-    c2 <= next_c2;
-    b2 <= b1 + next_a2;
-    w2 <= w1;
-    a3 <= next_a3;
-    c3 <= next_c3;
-    b3 <= (b2 - next_a3) ^ {next_a3[12:0], next_a3[31:13]};
-    w3 <= w2;
-    oa <= next_a4;
-    ob <= next_c4;
-    oc <= b3 + next_a4;
-    ow <= w3;
+    if (iw > 12) begin
+      a0 <= next_a0;
+      c0 <= next_c0;
+      b0 <= next_b0;
+      w0 <= next_w0;
+      a1 <= next_a1;
+      c1 <= next_c1;
+      b1 <= (b0 - next_a1) ^ {next_a1[25:0], next_a1[31:26]};
+      w1 <= w0;
+      a2 <= next_a2;
+      c2 <= next_c2;
+      b2 <= b1 + next_a2;
+      w2 <= w1;
+      a3 <= next_a3;
+      c3 <= next_c3;
+      b3 <= (b2 - next_a3) ^ {next_a3[12:0], next_a3[31:13]};
+      w3 <= w2;
+      oa <= next_a4;
+      ob <= next_c4;
+      oc <= b3 + next_a4;
+      ow <= w3;
+    end else begin
+      a0 <= ia;
+      c0 <= ic;
+      b0 <= ib;
+      w0 <= iw;
+      a1 <= a0;
+      c1 <= c0;
+      b1 <= b0;
+      w1 <= w0;
+      a2 <= a1;
+      c2 <= c1;
+      b2 <= b1;
+      w2 <= w1;
+      a3 <= a2;
+      c3 <= c2;
+      b3 <= b2;
+      w3 <= w2;
+      oa <= a3;
+      ob <= b3;
+      oc <= c3;
+      ow <= w3;
+    end
   end
 end
 endmodule
@@ -140,15 +163,14 @@ module hash_r2 (
 , input [31:0] k0
 , input [31:0] k1
 , input [31:0] k2
-, input [7:0]  wc
+, input [7:0]  iw
 , output reg[31:0] o
 );
-
-reg complete;
 
 reg[31:0] a0, b0, c0;
 reg[31:0] a1, b1, c1;
 reg[31:0] a2, b2, c2;
+reg[31:0] next_a0, next_b0, next_c0;
 
 wire[31:0] next_c1 = (c0 ^ b0) - {b0[17:0], b0[31:18]};
 wire[31:0] next_a1 = (a0 ^ next_c1) - {next_c1[20:0], next_c1[31:21]};
@@ -159,22 +181,34 @@ always @(posedge CLK) begin
   if (RST)
     o  <= 1'b0;
   else begin
-    c0 <= next_c0;
-    a0 <= next_a0;
-    b0 <= next_b0;
-    c1 <= next_c1;
-    a1 <= next_a1;
-    b1 <= (b0 ^ next_a1) - {next_a1[6:0], next_a1[31:7]};
-    c2 <= next_c2;
-    a2 <= next_a2;
-    b2 <= (b1 ^ next_a2) - {next_a2[17:0], next_a2[31:18]};
-    o  <= (c2 ^ b2) - {b2[7:0], b2[31:8]};
+    if (iw) begin
+      c0 <= next_c0;
+      a0 <= next_a0;
+      b0 <= next_b0;
+      c1 <= next_c1;
+      a1 <= next_a1;
+      b1 <= (b0 ^ next_a1) - {next_a1[6:0], next_a1[31:7]};
+      c2 <= next_c2;
+      a2 <= next_a2;
+      b2 <= (b1 ^ next_a2) - {next_a2[17:0], next_a2[31:18]};
+      o  <= (c2 ^ b2) - {b2[7:0], b2[31:8]};
+    end else begin
+      c0 <= ic;
+      a0 <= ia;
+      b0 <= ib;
+      c1 <= c0;
+      a1 <= a0;
+      b1 <= b0;
+      c2 <= c1;
+      a2 <= a1;
+      b2 <= b1;
+      o  <= c2;
+    end
   end
 end
 
-reg[31:0] next_a0, next_b0, next_c0;
 always @* begin
-  case (wc)
+  case (iw)
     4'hc: begin
       next_c0 <= ic + k2;
       next_b0 <= ib + k1;
@@ -235,12 +269,6 @@ always @* begin
       next_b0 <= ib;
       next_a0 <= ia + k0 & 32'hFF000000;
     end
-    4'h0: begin
-      next_c0  <= ic;
-      next_b0  <= ib;
-      next_a0  <= ia;
-      complete <= 1'b1;
-    end
   endcase
 end
 
@@ -264,7 +292,7 @@ wire[31:0] c[0:21];
 wire[7:0]  w[0:21];
 wire[31:0] lc;
 
-/* initial */
+/* round 0 */
 assign a[0] = k0 + 32'hDEADBEEF + key_length + interval;
 assign b[0] = k1 + 32'hDEADBEEF + key_length + interval;
 assign c[0] = k2 + 32'hDEADBEEF + key_length + interval;
