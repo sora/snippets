@@ -87,7 +87,7 @@ reg[31:0] a2, b2, c2;
 reg[31:0] a3, b3, c3;
 reg[7:0]  w0, w1, w2, w3;
 
-wire[7:0]  next_w0 = (iw > 12) ? iw - 12 : iw;
+wire[7:0]  next_w0 = iw - 12;
 wire[31:0] next_a0 = ia + k0;
 wire[31:0] next_b0 = ib + k1;
 wire[31:0] next_c0 = ic + k2;
