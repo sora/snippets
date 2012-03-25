@@ -215,17 +215,17 @@ always @* begin
       next_a0 <= ia + k0;
     end
     4'hb: begin
-      next_c0 <= ic + k2 & 32'hFFFFFF00;
+      next_c0 <= ic + k2 & 32'h00FFFFFF;
       next_b0 <= ib + k1;
       next_a0 <= ia + k0;
     end
     4'ha: begin
-      next_c0 <= ic + k2 & 32'hFFFF0000;
+      next_c0 <= ic + k2 & 32'h0000FFFF;
       next_b0 <= ib + k1;
       next_a0 <= ia + k0;
     end
     4'h9: begin
-      next_c0 <= ic + k2 & 32'hFF000000;
+      next_c0 <= ic + k2 & 32'h000000FF;
       next_b0 <= ib + k1;
       next_a0 <= ia + k0;
     end
@@ -236,17 +236,17 @@ always @* begin
     end
     4'h7: begin
       next_c0 <= ic;
-      next_b0 <= ib + k1 & 32'hFFFFFF00;
+      next_b0 <= ib + k1 & 32'h00FFFFFF;
       next_a0 <= ia + k0;
     end
     4'h6: begin
       next_c0 <= ic;
-      next_b0 <= ib + k1 & 32'hFFFF0000;
+      next_b0 <= ib + k1 & 32'h0000FFFF;
       next_a0 <= ia + k0;
     end
     4'h5: begin
       next_c0 <= ic;
-      next_b0 <= ib + k1 & 32'hFF000000;
+      next_b0 <= ib + k1 & 32'h000000FF;
       next_a0 <= ia + k0;
     end
     4'h4: begin
@@ -257,17 +257,22 @@ always @* begin
     4'h3: begin
       next_c0 <= ic;
       next_b0 <= ib;
-      next_a0 <= ia + k0 & 32'hFFFFFF00;
+      next_a0 <= ia + k0 & 32'h00FFFFFF;
     end
     4'h2: begin
       next_c0 <= ic;
       next_b0 <= ib;
-      next_a0 <= ia + k0 & 32'hFFFF0000;
+      next_a0 <= ia + k0 & 32'h0000FFFF;
     end
     4'h1: begin
       next_c0 <= ic;
       next_b0 <= ib;
-      next_a0 <= ia + k0 & 32'hFF000000;
+      next_a0 <= ia + k0 & 32'h000000FF;
+    end
+    default: begin
+      next_c0 <= ic;
+      next_b0 <= ib;
+      next_a0 <= ia;
     end
   endcase
 end
